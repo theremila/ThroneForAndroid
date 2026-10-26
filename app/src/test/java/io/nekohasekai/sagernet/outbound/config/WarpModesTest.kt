@@ -6,6 +6,7 @@ import io.nekohasekai.sagernet.outbound.json.JsonInput
 import io.nekohasekai.sagernet.outbound.json.JsonObject
 import io.nekohasekai.sagernet.outbound.types.AutoSelector
 import io.nekohasekai.sagernet.outbound.types.Chain
+import io.nekohasekai.sagernet.outbound.types.Custom
 import io.nekohasekai.sagernet.outbound.types.Socks
 import io.nekohasekai.sagernet.outbound.types.XrayVless
 import io.nekohasekai.sagernet.route.OutboundIds
@@ -192,6 +193,23 @@ class WarpModesTest {
             { identity(key = " ") }, { identity(peer = "") }, { identity(endpoint = "") }, { identity(ipv4 = "") },
         )) {
             assertThrows(IllegalArgumentException::class.java, invalid)
+        }
+    }
+
+    @Test fun selectorSkipsMembersThatCannotDialThroughEntryWarp() {
+        val members = mapOf(1L to socks(), 2L to Custom().apply {
+            subtype = Custom.CUSTOM_XRAY_FULL_CONFIG
+            config = "{\"outbounds\":[{\"protocol\":\"freedom\",\"tag\":\"direct\"}]}"
+        })
+        val selector = AutoSelector().apply { gids.add(9L) }
+        val group = SelectorGroup(9, "Test", -1, -1, null, null,
+            members.map { (id, outbound) -> SelectorMember(id, outbound, 0, 0, "") })
+        val routing = RoutingInput(RoutingInput.DEFAULT.profile, RoutingInput.DEFAULT.catalog, SelectorStore { group })
+        for (order in listOf("warp-first", "warp-both")) {
+            val generated = ConfigGenerator(ProfileProvider { if (it == 3L) selector else members[it] }, settings(order = order), routing = routing).build(3)
+            assertTrue(generated.error, generated.ok)
+            assertEquals(listOf(1L), generated.autoSelector!!.members.values.toList())
+            assertTrue(generated.autoSelector.rejected.containsKey(2L))
         }
     }
 }

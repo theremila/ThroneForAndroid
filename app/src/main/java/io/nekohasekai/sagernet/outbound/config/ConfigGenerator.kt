@@ -697,7 +697,7 @@ class ConfigGenerator @JvmOverloads constructor(
         class PlannedMember(val member: SelectorMember, val hopIds: List<Long>, val bridges: MemberBridges, val origin: HopOrigin)
 
         // One member the core rejects fails the whole group's start, so drop it instead.
-        val rejected = rejectedMembers(chains, reads, plan.build)
+        val rejected = rejectedMembers(chains, reads, plan.build).toMutableMap()
         val plannedMembers = ArrayList<PlannedMember>()
         var bridgeCount = 0
         for (id in plan.build) {
@@ -710,9 +710,16 @@ class ConfigGenerator @JvmOverloads constructor(
             hopIds.add(id)
             if (memberGroup.frontProxyId > 0) hopIds.add(memberGroup.frontProxyId)
             if (warpBefore) hopIds.add(WarpHop.ENTRY_PROFILE_ID)
+            val origin = HopOrigin(selector, listOf(ChainGroup(memberGroup.name, memberGroup.landingProxyId, memberGroup.frontProxyId)))
+            if (warpBefore) {
+                val error = chains.candidateError(hopIds, origin)
+                if (error.isNotEmpty() && error != OutboundChecks.fragmentSettingsError(buildContext)) {
+                    rejected[id] = error
+                    continue
+                }
+            }
             val bridges = chains.bridgesFor(hopIds)
             bridgeCount += bridges.count
-            val origin = HopOrigin(selector, listOf(ChainGroup(memberGroup.name, memberGroup.landingProxyId, memberGroup.frontProxyId)))
             plannedMembers.add(PlannedMember(member, hopIds, bridges, origin))
         }
         // One batch for every member: reserving per member can deal the same port twice.
