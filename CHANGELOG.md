@@ -1,3 +1,12 @@
+#### 2.0.4-warp.1
+
+* Add WARP at entry, exit, or both ends of the selected connection
+* Add AmneziaWG packet camouflage to built-in WARP
+* Generate independent identities for dual WARP
+* Support WARP placement in chains and Auto Selector, with WARP bypass routing
+
+Fork prerelease based on Throne for Android 2.0.4. APKs use the standard `com.nb4a.throne` package and this fork's own signing key. Back up your settings before replacing an installation signed by another key.
+
 #### 2.0.4
 
 * Add DNS settings to routing profiles **1**
